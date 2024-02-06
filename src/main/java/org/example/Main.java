@@ -22,7 +22,7 @@ public class Main {
         HashSet<String> includeExtension = parsedArgs.getIncludeExtension() != null ? new HashSet<>(Arrays.asList(parsedArgs.getIncludeExtension().split(","))) : null;
         HashSet<String> excludeExtension = parsedArgs.getExcludeExtension() != null ? new HashSet<>(Arrays.asList(parsedArgs.getExcludeExtension().split(","))) : null;
         ThreadPoolExecutor executor = parsedArgs.getThreadAmount() != null ? (ThreadPoolExecutor) Executors.newFixedThreadPool(parsedArgs.getThreadAmount()) : null;
-        DirectoryUtil.getDirectoryInfoByExtension(path, parsedArgs.getRecursive(), parsedArgs.getMaxDepth(), 0, includeExtension, excludeExtension, executor)
+        DirectoryUtil.getDirectoryInfoByExtension(path, parsedArgs.getRecursive(), parsedArgs.getMaxDepth(),  includeExtension, excludeExtension, executor)
                 .ifPresentOrElse((info) -> {
                     if (executor != null) {
                         executor.shutdown();

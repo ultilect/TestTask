@@ -9,7 +9,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 public class DirectoryUtil {
     public static Optional<Hashtable<String, DirectoryInfoByExtension>> getDirectoryInfoByExtension(String path, Boolean isRecursive,
-                                                                                          Integer maxDepths, Integer nowDeps, HashSet<String> includeExtension,
+                                                                                          Integer maxDepths, HashSet<String> includeExtension,
                                                                                           HashSet<String> excludeExtension, ThreadPoolExecutor executor) {
         File folder = new File(path);
         if (!folder.exists() || !folder.isDirectory()) {
@@ -17,15 +17,15 @@ public class DirectoryUtil {
             return Optional.empty();
         }
 
-        Stack<File> directoriesForStatistic = new Stack<>();
-        directoriesForStatistic.add(folder);
+        Stack<StackInfo> directoriesForStatistic = new Stack<>();
+        directoriesForStatistic.add(new StackInfo(folder,0));
         Hashtable<String, DirectoryInfoByExtension> info = new Hashtable<>();
         if (executor != null) {
             synchronized (info) {
                 synchronized (directoriesForStatistic) {
                     while (!directoriesForStatistic.isEmpty()) {
                         executor.submit(() -> {
-                            handleDirectory(isRecursive, directoriesForStatistic, info, includeExtension, excludeExtension, maxDepths, nowDeps);
+                            handleDirectory(isRecursive, directoriesForStatistic, info, includeExtension, excludeExtension, maxDepths);
                         });
                         if (executor.getQueue().size() >= executor.getMaximumPoolSize() * 10)
                             executor.getQueue().forEach(Runnable::run);
@@ -34,16 +34,16 @@ public class DirectoryUtil {
             }
         } else {
             while (!directoriesForStatistic.isEmpty()) {
-                handleDirectory(isRecursive, directoriesForStatistic, info, includeExtension, excludeExtension, maxDepths, nowDeps);
+                handleDirectory(isRecursive, directoriesForStatistic, info, includeExtension, excludeExtension, maxDepths);
             }
         }
         return Optional.of(info);
     }
 
-    private static void handleDirectory( Boolean isRecursive, Stack<File> directoriesForStatistic,  Hashtable<String, DirectoryInfoByExtension> info,  HashSet<String> includeExtension,
-                                 HashSet<String> excludeExtension,  Integer maxDepths, Integer nowDeps) {
-        File currentFolder;
-        currentFolder = directoriesForStatistic.pop();
+    private static void handleDirectory(Boolean isRecursive, Stack<StackInfo> directoriesForStatistic, Hashtable<String, DirectoryInfoByExtension> info, HashSet<String> includeExtension,
+                                        HashSet<String> excludeExtension, Integer maxDepths) {
+        StackInfo infoFromStack = directoriesForStatistic.pop();
+        File currentFolder = infoFromStack.getFile();
         for (final File file : currentFolder.listFiles()) {
             if (file.isFile()) {
                 Optional<String> fileExtension = getFileExtension(file.getPath());
@@ -56,8 +56,8 @@ public class DirectoryUtil {
                 currentExtensionInDirectory.setFileAmount(currentExtensionInDirectory.getFileAmount() + 1);
                 currentExtensionInDirectory.setDataFromFileInfo(fileInfo);
                 info.put(fileExtension.get(), currentExtensionInDirectory);
-            } else if (file.isDirectory() && isRecursive && (maxDepths == null || (nowDeps <= maxDepths))) {
-                directoriesForStatistic.push(file);
+            } else if (file.isDirectory() && isRecursive && (maxDepths == null || (infoFromStack.getRecursiveDepth() <= maxDepths))) {
+                directoriesForStatistic.push(new StackInfo(file, infoFromStack.getRecursiveDepth()+1));
             }
         }
     }
@@ -65,5 +65,31 @@ public class DirectoryUtil {
         if (filePath == null) return Optional.empty();
         return Optional.of(filePath).filter(f -> f.contains("."))
                 .map(f -> f.substring(filePath.lastIndexOf(".") + 1));
+    }
+}
+
+class StackInfo {
+    private File file;
+    private Integer recursiveDepth;
+
+    public StackInfo(File file, Integer recursiveDepth) {
+        this.file = file;
+        this.recursiveDepth = recursiveDepth;
+    }
+
+    public File getFile() {
+        return file;
+    }
+
+    public void setFile(File file) {
+        this.file = file;
+    }
+
+    public Integer getRecursiveDepth() {
+        return recursiveDepth;
+    }
+
+    public void setRecursiveDepth(Integer recursiveDepth) {
+        this.recursiveDepth = recursiveDepth;
     }
 }
