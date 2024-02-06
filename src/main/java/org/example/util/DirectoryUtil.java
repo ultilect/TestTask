@@ -45,7 +45,6 @@ public class DirectoryUtil {
         File currentFolder;
         currentFolder = directoriesForStatistic.pop();
         for (final File file : currentFolder.listFiles()) {
-            System.out.printf("FILE %s\n", file.getPath());
             if (file.isFile()) {
                 Optional<String> fileExtension = getFileExtension(file.getPath());
                 if (fileExtension.isEmpty()
@@ -58,7 +57,6 @@ public class DirectoryUtil {
                 currentExtensionInDirectory.setDataFromFileInfo(fileInfo);
                 info.put(fileExtension.get(), currentExtensionInDirectory);
             } else if (file.isDirectory() && isRecursive && (maxDepths == null || (nowDeps <= maxDepths))) {
-                System.out.printf("FOLER %s\n", file.getPath());
                 directoriesForStatistic.push(file);
             }
         }
